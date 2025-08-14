@@ -61,7 +61,7 @@ def test_get_config_instance_optional_fields():
 
 
 def test_get_config_instance_no_file():
-    """Test getting config when the pyproject.toml file is not found (wich no required fields)."""
+    """Test getting config when the pyproject.toml file is not found (with no required fields)."""
     config = get_config_instance(
         OptionalHappyProjectConfig,
         subproject="happy-project",
