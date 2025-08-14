@@ -14,27 +14,15 @@ RAGBITS_KEY_ENV_VAR = "RAGBITS_SECRET_KEY"
 DEFAULT_KEY_LENGTH = 32
 
 
-@lru_cache(maxsize=1)
-def get_secret_key(env_var: str = RAGBITS_KEY_ENV_VAR, key_length: int = DEFAULT_KEY_LENGTH) -> str:
-    """
-    Get a secret key from environment variable with fallback to a default or randomly generated key.
-
-    Args:
-        env_var: The environment variable name to check for the secret key
-        default: Optional default key to use if environment variable is not set
-        key_length: Length of the key to generate if no key is provided
-
-    Returns:
-        The secret key as a string
-    """
-    # Try to get from environment variable
+@lru_cache(maxsize=None)
+def _cached_secret_key(env_var: str, key_length: int) -> str:
+    """Load a secret key for the given environment variable and key length."""
     secret_key = os.environ.get(env_var)
 
     if secret_key:
         logger.debug(f"Using secret key from environment variable: {env_var}")
         return secret_key
 
-    # Generate a random key
     random_key = base64.urlsafe_b64encode(secrets.token_bytes(key_length)).decode("utf-8")
     warnings.warn(
         f"No secret key found in environment variable {env_var}. "
@@ -46,3 +34,16 @@ def get_secret_key(env_var: str = RAGBITS_KEY_ENV_VAR, key_length: int = DEFAULT
     )
 
     return random_key
+
+
+def get_secret_key(env_var: str = RAGBITS_KEY_ENV_VAR, key_length: int = DEFAULT_KEY_LENGTH) -> str:
+    """Get a secret key from environment or generate one if missing.
+
+    The results are cached per ``env_var`` and ``key_length`` combination.
+    """
+
+    return _cached_secret_key(env_var, key_length)
+
+
+# Expose cache control for tests
+get_secret_key.cache_clear = _cached_secret_key.cache_clear  # type: ignore[attr-defined]
