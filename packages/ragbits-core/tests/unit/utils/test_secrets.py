@@ -1,3 +1,4 @@
+import base64
 import os
 from unittest.mock import patch
 
@@ -16,8 +17,8 @@ def test_get_secret_key_from_env():
 
 def test_get_secret_key_generates_random():
     """Test that a random key is generated when neither env var nor default is provided."""
+    get_secret_key.cache_clear()
     with patch.dict(os.environ, {}, clear=True):
-        # The function is cached, so we need to test with different env_var names
         key1 = get_secret_key(env_var="TEST_KEY_1")
         key2 = get_secret_key(env_var="TEST_KEY_2")
 
@@ -37,9 +38,16 @@ def test_get_secret_key_warning():
 
 
 def test_get_secret_key_caching():
-    """Test that the secret key function caches results."""
+    """Test that caching depends on env_var and key_length."""
+    get_secret_key.cache_clear()
     with patch.dict(os.environ, {}, clear=True):
-        # The same env_var should produce the same key due to caching
-        key1 = get_secret_key(env_var="TEST_CACHE_KEY")
-        key2 = get_secret_key(env_var="TEST_CACHE_KEY")
+        key1 = get_secret_key(env_var="TEST_CACHE_KEY", key_length=16)
+        key2 = get_secret_key(env_var="TEST_CACHE_KEY", key_length=16)
+        key3 = get_secret_key(env_var="TEST_CACHE_KEY", key_length=32)
+        key4 = get_secret_key(env_var="TEST_CACHE_KEY_2", key_length=16)
+
         assert key1 == key2
+        assert key1 != key3
+        assert key1 != key4
+        assert len(base64.urlsafe_b64decode(key1.encode())) == 16
+        assert len(base64.urlsafe_b64decode(key3.encode())) == 32
